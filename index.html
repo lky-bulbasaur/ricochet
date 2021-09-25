@@ -1,0 +1,846 @@
+﻿<!-- CSS stylesheet -->
+<style>
+    div {
+        user-select: none;
+        font-family: Calibri;
+        font-weight: bold;
+        letter-spacing: 3px;
+        color: #f5f5f5;
+        text-shadow: 2px 2px #616161;
+    }
+
+    input[type=radio] {
+        display: none;
+    }
+
+        input[type=radio] + label {
+            display: block;
+            background-color: #7e7e7e;
+            padding: 16px;
+            text-align: center;
+            font-size: 28px;
+            font-family: Calibri;
+        }
+
+        input[type=radio]:checked + label {
+            background-color: #4f4f4f;
+        }
+
+    button {
+        display: block;
+        background-color: #7e7e7e;
+        padding: 16px 120px;
+        text-align: center;
+        color: #f5f5f5;
+        font-size: 28px;
+        font-family: Calibri;
+        user-select: none;
+        font-weight: bold;
+        border: none;
+        box-shadow: 0 0px;
+    }
+
+        button:active {
+            background-color: #4f4f4f;
+            box-shadow: 0 0px;
+        }
+</style>
+
+<html>
+
+<!-- Import scripts that are used to establish cilent-server connection -->
+<!-- They are put here even before index.js (which is actually written in this HTML file) because otherwise it won't work -->
+<!-- Frankly saying I'm not entire sure why -->
+<head>
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.0/jquery.min.js"></script>
+    <script src="/scripts/socket.io/client-dist/socket.io.js"></script>
+</head>
+
+<body style="margin: 0px">
+    <!-- UI elements -->
+    <div id="host-menu">
+        <div align="center" style="position: absolute; left: 0%; right: 0%; top: 25%; bottom: 25%; width: auto; height: auto; background-color: #000000; opacity: 0.7"></div>
+        <div align="center" style="position: absolute; left: 0%; right: 0%; top: 30%; bottom: 40%; width: auto; height: auto; font-size: 120px; font-family: Calibri; letter-spacing: 48px">RICOCHET</div>
+        <div align="center" style="position: absolute; left: 0%; right: 0%; top: 45%; bottom: 50%; width: auto; height: auto; font-size: 24px; font-weight: lighter">Please choose a game mode</div>
+        <div style="position: absolute; left: 24.5%; right: 60.5%; top: 50%; bottom: 60%; width: auto; height: auto">
+            <input type="radio" id="default-mode" name="mode" value="default-mode" checked>
+            <label for="default-mode" style="text-shadow: 0px 0px">Default</label>
+        </div>
+        <div style="position: absolute; left: 42.5%; right: 42.5%; top: 50%; bottom: 70%; width: auto; height: auto">
+            <input type="radio" id="slowmo-mode" name="mode" value="slowmo-mode">
+            <label for="slowmo-mode" style="text-shadow: 0px 0px">Slow motion</label>
+        </div>
+        <div style="position: absolute; left: 60.5%; right: 24.5%; top: 50%; bottom: 70%; width: auto; height: auto">
+            <input type="radio" id="bullethell-mode" name="mode" value="bullethell-mode">
+            <label for="bullethell-mode" style="text-shadow: 0px 0px">Bullet hell</label>
+        </div>
+        <div style="position: absolute; left: 40.5%; right: 39%; top: 60%; bottom: 30%; width: auto; height: auto">
+            <button id="start-game">Start game</button>
+        </div>
+    </div>
+    <div id="member-menu">
+        <div align="center" style="position: absolute; left: 0%; right: 0%; top: 25%; bottom: 25%; width: auto; height: auto; background-color: #000000; opacity: 0.7"></div>
+        <div align="center" style="position: absolute; left: 0%; right: 0%; top: 40%; bottom: 45%; width: auto; height: auto; font-size: 120px; font-family: Calibri; letter-spacing: 48px">RICOCHET</div>
+        <div align="center" style="position: absolute; left: 0%; right: 0%; top: 55%; bottom: 50%; width: auto; height: auto; font-size: 24px; font-weight: lighter">Please wait for the host to start the game</div>
+    </div>
+    <div id="respawn-menu">
+        <div align="center" style="position: absolute; left: 0%; right: 0%; top: 25%; bottom: 25%; width: auto; height: auto; background-color: #000000; opacity: 0.7"></div>
+        <div align="center" style="position: absolute; left: 0%; right: 0%; top: 40%; bottom: 45%; width: auto; height: auto; font-size: 120px; font-family: Calibri; letter-spacing: 24px">YOU DIED</div>
+        <div align="center" style="position: absolute; left: 0%; right: 0%; top: 55%; bottom: 50%; width: auto; height: auto; font-size: 24px; font-weight: lighter">You will respawn (very) shortly</div>
+    </div>
+    <div id="victory-screen">
+        <div align="center" style="position: absolute; left: 0%; right: 0%; top: 25%; bottom: 25%; width: auto; height: auto; background-color: #000000; opacity: 0.7"></div>
+        <div align="center" style="position: absolute; left: 0%; right: 0%; top: 40%; bottom: 45%; width: auto; height: auto; font-size: 120px; font-family: Calibri; letter-spacing: 24px">GAME!</div>
+        <div id="victory-text" align="center" style="position: absolute; left: 0%; right: 0%; top: 55%; bottom: 50%; width: auto; height: auto; font-size: 24px; font-weight: lighter">This is a placeholder text lol</div>
+    </div>
+    <div id="hud">
+        <div class="health-bar">
+            <div id="max-hp" style="position: absolute; left: 38%; right: 38%; top: 75%; width: auto; height: 25px; background-color: #b71c1c"></div>
+            <div id="current-hp" style="position: absolute; left: 38%; right: 38%; top: 75%; width: auto; height: 25px; background-color: #4caf50"></div>
+            <div id="hp-text" align="center" style="position: absolute; left: 38%; right: 38%; top: 75%; width: auto; height: 25px; margin: 0px; padding: 0px; font-size: 20px"></div>
+        </div>
+        <div class="ammo-bar">
+            <div id="clip" align="center" style="position: absolute; left: 47%; right: 51%; top: 79%; width: auto; height: 25px; margin: 0px; padding: 0px; font-size: 20px"></div>
+            <div id="spare-ammo" align="center" style="position: absolute; left: 51%; right: 47%; top: 79%; width: auto; height: 25px; margin: 0px; padding: 0px; font-size: 20px"></div>
+            <div align="center" style="position: absolute; left: 49%; right: 49%; top: 79%; width: auto; height: 25px; margin: 0px; padding: 0px; font-size: 20px">|</div>
+        </div>
+        <div class="score-board" style="font-size: 60px;">
+            <div align="center" style="position: absolute; left: 25%; right: 65%; top: 90%; bottom: 1%; width: auto; height: auto; background-color: #000000; opacity: 0.5"></div>
+            <div align="center" style="position: absolute; left: 25%; right: 65%; top: 99%; bottom: 0%; width: auto; height: auto; background-color: #e7271d"></div>
+            <div id="player0-score" align="center" style="position: absolute; left: 25%; right: 65%; top: 91%; width: auto">0:0</div>
+            <div align="center" style="position: absolute; left: 35%; right: 55%; top: 90%; bottom: 1%; width: auto; height: auto; background-color: #000000; opacity: 0.6"></div>
+            <div align="center" style="position: absolute; left: 35%; right: 55%; top: 99%; bottom: 0%; width: auto; height: auto; background-color: #132ed1"></div>
+            <div id="player1-score" align="center" style="position: absolute; left: 35%; right: 55%; top: 91%; width: auto">0:0</div>
+            <div align="center" style="position: absolute; left: 45%; right: 45%; top: 90%; bottom: 0%; width: auto; height: auto; background-color: #000000; opacity: 0.7"></div>
+            <div id="player0-score" align="center" style="position: absolute; left: 45%; right: 45%; top: 91%; width: auto; font-size: 16px">Playing to</div>
+            <div id="player0-score" align="center" style="position: absolute; left: 45%; right: 45%; top: 92%; width: auto">10</div>
+            <div align="center" style="position: absolute; left: 55%; right: 35%; top: 90%; bottom: 1%; width: auto; height: auto; background-color: #000000; opacity: 0.6"></div>
+            <div align="center" style="position: absolute; left: 55%; right: 35%; top: 99%; bottom: 0%; width: auto; height: auto; background-color: #f5f557"></div>
+            <div id="player2-score" align="center" style="position: absolute; left: 55%; right: 35%; top: 91%; width: auto">0:0</div>
+            <div align="center" style="position: absolute; left: 65%; right: 25%; top: 90%; bottom: 1%; width: auto; height: auto; background-color: #000000; opacity: 0.5"></div>
+            <div align="center" style="position: absolute; left: 65%; right: 25%; top: 99%; bottom: 0%; width: auto; height: auto; background-color: #117f2d"></div>
+            <div id="player3-score" align="center" style="position: absolute; left: 65%; right: 25%; top: 91%; width: auto">0:0</div>
+        </div>
+    </div>
+
+
+    <!-- Index.js -->
+    <!-- NONE of the game logics are calculated here, cilents are only responsnible for giving sensory feedback -->
+    <!-- According to the game state from the server -->
+    <script type="module">
+        // Imports Three.js, one of the only 2 (actually useful) libraries used
+        import * as THREE from '../scripts/three/src/Three.js';
+        import { GLTFLoader } from '../scripts/three/src/GLTFLoader.js';
+
+        // Global variables that keep track of important scene objects that should not be redrawn
+        var playerId = -1;
+        var mapObject;
+        var playerObjects = [];
+        var playerClips = [];
+        var playerMixers = [];
+        var playerGunObjects = [];
+        var playerFireObjects = [];
+        var playerDir = [0, 0, 0, 0];
+        var soundMeshes = [];
+
+        // Helper functions that help in rendering
+        function drawPlayer(id, x, y) {
+            if (playerObjects[id] != null) playerObjects[id].position.set(x, 0, y);
+            if (playerObjects[id] != null) playerObjects[id].rotation.set(0, playerDir[id], 0);
+            if (playerGunObjects[id] != null) playerGunObjects[id].position.set(x - 16 * Math.cos(-playerDir[id] - Math.PI * 0.4), 40, y - 16 * Math.sin(-playerDir[id] - Math.PI * 0.4));
+            if (playerGunObjects[id] != null) playerGunObjects[id].rotation.set(0, playerDir[id] + Math.PI * 0.15, 0);
+            scene.add(playerObjects[id]);
+        }
+
+        function drawProjectile(id, r, x, y) {
+            var coreMaterial;
+            var haloMaterial;
+            switch (id) {
+                case 0:
+                    coreMaterial = new THREE.MeshBasicMaterial({ color: 0x000000 });
+                    haloMaterial = new THREE.MeshBasicMaterial({ color: 0xff073a });
+                    break;
+                case 1:
+                    coreMaterial = new THREE.MeshBasicMaterial({ color: 0x000000 });
+                    haloMaterial = new THREE.MeshBasicMaterial({ color: 0x1b03a3 });
+                    break;
+                case 2:
+                    coreMaterial = new THREE.MeshBasicMaterial({ color: 0x000000 });
+                    haloMaterial = new THREE.MeshBasicMaterial({ color: 0xfaed27 });
+                    break;
+                case 3:
+                    coreMaterial = new THREE.MeshBasicMaterial({ color: 0x000000 });
+                    haloMaterial = new THREE.MeshBasicMaterial({ color: 0x39ff14 });
+                    break;
+                default:
+                    coreMaterial = new THREE.MeshBasicMaterial({ color: 0x000000 });
+                    haloMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
+                    break;
+            }
+
+            haloMaterial.transparent = true;
+            haloMaterial.opacity = 0.7;
+
+            var mesh = new THREE.Mesh(
+                new THREE.SphereGeometry(r * 1.3, 16, 16),
+                coreMaterial
+            );
+            mesh.position.set(x, 48, y);
+            scene.add(mesh);
+            mesh = new THREE.Mesh(
+                new THREE.SphereGeometry(r * 1.6, 16, 16),
+                haloMaterial
+            );
+            mesh.position.set(x, 48, y);
+            scene.add(mesh);
+        }
+
+        function drawPowerup(type, x, y) {
+            var coreMaterial, haloMaterial, light;
+            if (type == 'health') {
+                haloMaterial = new THREE.MeshBasicMaterial({ color: 0x8bc34a });
+                light = new THREE.PointLight(0x8bc34a, 1, 160);
+            }
+            if (type == 'ammo') {
+                haloMaterial = new THREE.MeshBasicMaterial({ color: 0xffb74d });
+                light = new THREE.PointLight(0xffb74d, 1, 160);
+            }
+
+            haloMaterial.transparent = true;
+            haloMaterial.opacity = 0.9;
+
+            coreMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
+            var mesh = new THREE.Mesh(
+                new THREE.SphereGeometry(12, 16, 16),
+                coreMaterial
+            );
+            mesh.castShadow = true;
+            mesh.position.set(x, 32, y);
+            scene.add(mesh);
+            mesh = new THREE.Mesh(
+                new THREE.SphereGeometry(16, 16, 16),
+                haloMaterial
+            );
+            mesh.castShadow = true;
+            mesh.position.set(x, 32, y);
+            scene.add(mesh);
+            light.position.set(x, 32, y);
+            scene.add(light);
+        }
+
+        // This function is used to show the bounding volume of map obstables
+        function drawTriangle(v1, v2, v3, material) {
+            var geometry = new THREE.BufferGeometry();
+
+            var vertices = new Float32Array([
+                v1.x, v1.y, v1.z,
+                v2.x, v2.y, v2.z,
+                v3.x, v3.y, v3.z
+            ]);
+
+            geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+            geometry.computeFaceNormals();
+            geometry.computeVertexNormals();
+            var mesh = new THREE.Mesh(geometry, material);
+            mesh.receiveShadow = true;
+            mesh.castShadow = true;
+            scene.add(mesh);
+        }
+
+        // This function is used to show the bounding volume of map obstables
+        function drawRectangle(v1, v2, v3, v4, material) {
+            drawTriangle(v1, v2, v4, material);
+            drawTriangle(v2, v3, v4, material);
+        }
+
+        // Events for the client to communicate with the server
+        // Receives stuff from server
+        var socket = io();
+
+        // Displays "create game" menu for host
+        // Displays "waiting for game to begin" menu for other cilents
+        socket.on('connection', data => {
+            document.getElementById('hud').style.visibility = 'hidden';
+
+            playerId = data;
+            if (playerId == 0) {
+                document.getElementById('host-menu').style.visibility = 'visible';
+                document.getElementById('member-menu').style.visibility = 'hidden';
+            } else {
+                document.getElementById('host-menu').style.visibility = 'hidden';
+                document.getElementById('member-menu').style.visibility = 'visible';
+            }
+            document.getElementById('respawn-menu').style.visibility = 'hidden';
+            document.getElementById('victory-screen').style.visibility = 'hidden';
+        });
+
+        // Receives updated game state from server and renders the scene accordingly
+        // Game state is updated and sent to cilent around 60 times per second
+        socket.on('refreshGame', data => {
+            document.getElementById('hud').style.visibility = 'visible';
+            document.getElementById('host-menu').style.visibility = 'hidden';
+            document.getElementById('member-menu').style.visibility = 'hidden';
+
+            // Refresh scene by removing "temporary" objects
+            // Namely projectiles and powerups (since they can be "depleted" and not appear in the stage forever)
+            var keepCount = 0;
+            if (soundMeshes.length > 50) {
+                for (var i = 0; i < soundMeshes.length; ++i) {
+                    scene.remove(soundMeshes[i]);
+                }
+                soundMeshes = [];
+            }
+
+            while (scene.children.length > keepCount) {
+                var curObject = scene.children[keepCount];
+                if ((curObject == mapObject) || (curObject == lightTarget) || (curObject == dirLight1) || (curObject == dirLight2) || (curObject == dirLight3) || (curObject == ambLight)
+                    || (curObject == playerObjects[0]) || (curObject == playerObjects[1]) || (curObject == playerObjects[2]) || (curObject == playerObjects[3])
+                    || (curObject == playerGunObjects[0]) || (curObject == playerGunObjects[1]) || (curObject == playerGunObjects[2]) || (curObject == playerGunObjects[3])
+                    || (curObject == playerFireObjects[0]) || (curObject == playerFireObjects[1]) || (curObject == playerFireObjects[2]) || (curObject == playerFireObjects[3])
+                    || (curObject.name == 'persistent')) {
+                    ++keepCount;
+                } else {
+                    scene.remove(curObject);
+                }
+            }
+
+            // Parsed the data received from server
+            var parsed = data.split('|');
+            var myId = parsed[0];
+            var players = parsed[1].split(';');
+            var planes = parsed[2].split(';');
+            var projectiles = parsed[3].split(';');
+            var powerups = parsed[4].split(';');
+
+            /*
+            // Planes
+            for (var i = 0; i < planes.length - 1; ++i) {
+                var parsed = planes[i].split(' ');
+                var x1 = parseFloat(parsed[0]);
+                var y1 = parseFloat(parsed[1]);
+                var x2 = parseFloat(parsed[2]);
+                var y2 = parseFloat(parsed[3]);
+
+                drawRectangle(
+                    new THREE.Vector3(x1, 64, y1),
+                    new THREE.Vector3(x2, 64, y2),
+                    new THREE.Vector3(x2, 0, y2),
+                    new THREE.Vector3(x1, 0, y1),
+                    new THREE.MeshPhongMaterial({ color: 0x718792, side: THREE.DoubleSide })
+                );
+            }
+            */
+
+            // Draws the scene
+
+            // Powerups
+            for (var i = 0; i < powerups.length - 1; ++i) {
+                var parsed = powerups[i].split(' ');
+                var type = parsed[0];
+                var x = parseFloat(parsed[1]);
+                var y = parseFloat(parsed[2]);
+                var isAlive = true;
+                if (parsed[3] == 'false') isAlive = false;
+
+                if (isAlive) drawPowerup(type, x, y);
+            }
+
+            // Projectiles
+            for (var i = 0; i < projectiles.length - 1; ++i) {
+                var parsed = projectiles[i].split(' ');
+                var player = parseInt(parsed[0]);
+                var x = parseFloat(parsed[1]);
+                var y = parseFloat(parsed[2]);
+                var r = parseFloat(parsed[3]);
+
+                drawProjectile(player, r, x, y);
+            }
+
+            // Players
+            for (var i = 0; i < players.length - 1; ++i) {
+                var parsed = players[i].split(' ');
+                var x = parseFloat(parsed[1]);
+                var y = parseFloat(parsed[2]);
+                playerDir[i] = -parseFloat(parsed[3]) + Math.PI * 0.4;
+                var maxHp = parseFloat(parsed[4]);
+                var hp = parseFloat(parsed[5]);
+                var clip = parseInt(parsed[6]);
+                var spare = parseInt(parsed[7]);
+                var isAlive = true; if (parsed[8] == 'false') isAlive = false;
+                var isMoving = true; if (parsed[9] == 'false') isMoving = false;
+                var isFiring = true; if (parsed[10] == 'false') isFiring = false;
+                var isReloading = true; if (parsed[11] == 'false') isReloading = false;
+                var kills = parseInt(parsed[12]);
+                var deaths = parseInt(parsed[13]);
+
+                // Player death animation
+                var dieAction = playerMixers[i].clipAction(playerClips[i][0]);
+                dieAction.repetitions = 0;
+                dieAction.setDuration(3.6);
+                var walkAction = playerMixers[i].clipAction(playerClips[i][2]);
+
+                // Draw stuff that are visible to everyone
+                // Muzzle Flash
+                if ((!isReloading) && (clip > 0)) {
+                    if (isFiring) {
+                        playerFireObjects[i].position.set(x - 16 * Math.cos(-playerDir[i] - Math.PI * 0.4), 48, y - 16 * Math.sin(-playerDir[i] - Math.PI * 0.4));
+                        playerFireObjects[i].rotation.set(0, playerDir[i] + Math.PI * 0.15, Math.random() - 0.5);
+                    } else {
+                        playerFireObjects[i].position.set(x - 16 * Math.cos(-playerDir[i] - Math.PI * 0.4), 9001, y - 16 * Math.sin(-playerDir[i] - Math.PI * 0.4));
+                    }
+                } else {
+                    playerFireObjects[i].position.set(x - 16 * Math.cos(-playerDir[i] - Math.PI * 0.4), 9001, y - 16 * Math.sin(-playerDir[i] - Math.PI * 0.4));
+                }
+
+                // Player model (amogus)
+                if (isAlive) {
+                    dieAction.stop();
+                    drawPlayer(i, x, y)
+                } else {
+                    dieAction.play();
+                    playerGunObjects[i].position.set(x, 9001, y);
+                    playerFireObjects[i].position.set(x, 9001, y);
+                }
+
+                // Updates scoreboard
+                var scoreId = 'player' + i + '-score';
+                var scoreText = kills + ':' + deaths;
+                document.getElementById(scoreId).innerHTML = scoreText;
+
+                // Player walk animation
+                if (isMoving) walkAction.play()
+                else walkAction.stop();
+
+                // Draw stuff only visible to current player
+                if (i == myId) {
+                    // Displays respawn menu if player dies
+                    if (isAlive) {
+                        bgm.setVolume(0.25);
+                        document.getElementById('respawn-menu').style.visibility = 'hidden';
+                        camera.position.set(x, 700, y + 250);
+                        camera.lookAt(new THREE.Vector3(x, 0, y));
+                    } else {
+                        bgm.setVolume(0.07);
+                        document.getElementById('respawn-menu').style.visibility = 'visible';
+                        camera.position.set(450, 800, 800);
+                        camera.lookAt(new THREE.Vector3(450, 0, 450));
+                    }
+
+                    // Updates health and ammo HUD
+                    var att = 'position: absolute; left: 38%;' + 'right: ' + (38 + 24 * (1 - hp / maxHp)) + '%; top: 75%; width: auto; height: 25px; background-color: #4caf50';
+                    var prettyHp = parseInt(hp);
+
+                    document.getElementById('hp-text').innerHTML = prettyHp;
+                    document.getElementById('current-hp').setAttribute('style', att);
+                    document.getElementById('clip').innerHTML = clip;
+                    document.getElementById('spare-ammo').innerHTML = spare;
+                }
+            }
+
+            render();
+        });
+
+        // Plays (positional) audio when server says so (usually a signal is fired from the server when collision is detected)
+        socket.on('playAudio', data => {
+            var parsed = data.split(' ');
+            var type = parsed[1];
+            var x = parseFloat(parsed[2]);
+            var y = parseFloat(parsed[3]);
+            var mesh = new THREE.Mesh();
+            var sound;
+            if (type == 'pew') {
+                sound = pewSound;
+            } else if (type == 'oof') {
+                sound = oofSound;
+            } else if (type == 'ding') {
+                sound = dingSound;
+            } else if (type == 'hit') {
+                sound = hitSound;
+            } else if (type == 'reload') {
+                sound = reloadSound;
+            } else if (type == 'recover') {
+                sound = recoverSound;
+            };
+            if (sound.isPlaying) sound.isPlaying = false;
+            mesh.add(sound);
+            mesh.position.set(x, 200, y);
+            mesh.name = 'persistent';
+            soundMeshes.push(mesh);
+            scene.add(mesh);
+            sound.play();
+        });
+
+        // Ends the game and displays victory screen when the server sends a "game over" signal
+        socket.on('endGame', data => {
+            var parsed = data.split(' ');
+            var winner = parseInt(parsed[1]);
+            console.log(winner);
+            var winnerName;
+            switch (winner) {
+                case 0: winnerName = 'Red'; break;
+                case 1: winnerName = 'Blue'; break;
+                case 2: winnerName = 'Yellow'; break;
+                case 3: winnerName = 'Green'; break;
+                default: winnerName = 'Josh'; break;
+            }
+            document.getElementById('victory-text').innerHTML = winnerName + ' has emerged victorious!';
+            document.getElementById('respawn-menu').style.visibility = 'hidden';
+            document.getElementById('victory-screen').style.visibility = 'visible';
+            render();
+        });
+
+        // Sends stuff back to server
+
+        // Creates the game (only applicable to the host)
+        document.getElementById('start-game').addEventListener(
+            'click',
+            event => {
+                var modes = document.getElementsByName('mode');
+                for (var i = 0; i < modes.length; ++i) {
+                    if (modes[i].checked) {
+                        socket.emit('startGame', modes[i].value);
+                        break;
+                    }
+                }
+                document.getElementById('host-menu').style.visibility = 'hidden';
+            },
+            false
+        );
+
+        // Other event listeners for WASD + M1 controls
+        document.addEventListener(
+            'keydown',
+            event => {
+                socket.emit('startAction', String.fromCharCode(event.keyCode));
+            },
+            false
+        );
+
+        document.addEventListener(
+            'keyup',
+            event => {
+                socket.emit('endAction', String.fromCharCode(event.keyCode));
+            },
+            false
+        );
+
+        document.addEventListener(
+            'mousedown',
+            event => {
+                socket.emit('startAction', event.button)
+            },
+            false
+        );
+
+        document.addEventListener(
+            'mousemove',
+            event => {
+                var x = event.clientX - window.innerWidth / 2;
+                var y = event.clientY - window.innerHeight / 2;
+                var theta = Math.atan(y / x);
+
+                if ((x > 0) && (y > 0)) {
+                    // Do nothing
+                } else if ((x < 0) && (y > 0)) {
+                    theta = theta + Math.PI;
+                } else if ((x < 0) && (y < 0)) {
+                    theta = theta + Math.PI;
+                } else if ((x > 0) && (y < 0)) {
+                    theta = theta + 2 * Math.PI;
+                }
+
+                socket.emit('updateDirection', theta);
+            },
+            false
+        );
+
+        document.addEventListener(
+            'mouseup',
+            event => {
+                socket.emit('endAction', event.button)
+            },
+            false
+        );
+
+
+
+        // Defines all client-side rendering
+        init();
+
+        var camera, scene, renderer, modelLoader, audioLoader, listener,
+            bgm, pewSound, oofSound, dingSound, hitSound, reloadSound, recoverSound,
+            dirLight1, dirLight2, dirLight3, ambLight, lightTarget;
+
+        function init() {
+            // Model loader
+            modelLoader = new GLTFLoader();
+
+            // Load red models
+            modelLoader.load('../assets/PlayerModels/AmogusRed.glb', function (gltf) {
+                gltf.scene.scale.set(25, 25, 25);
+                gltf.scene.traverse(function (object) {
+                    if (object.isMesh) object.castShadow = true;
+                });
+                playerObjects[0] = gltf.scene;
+                playerClips[0] = gltf.animations;
+                playerMixers[0] = new THREE.AnimationMixer(gltf.scene);
+                scene.add(gltf.scene);
+            });
+            modelLoader.load('../assets/PlayerModels/GunRed.glb', function (gltf) {
+                gltf.scene.scale.set(20, 20, 20);
+                gltf.scene.traverse(function (object) {
+                    if (object.isMesh) object.castShadow = true;
+                });
+                playerGunObjects[0] = gltf.scene;
+                scene.add(gltf.scene);
+            });
+            modelLoader.load('../assets/PlayerModels/MuzzleFlash.glb', function (gltf) {
+                gltf.scene.scale.set(20, 20, 20);
+                playerFireObjects[0] = gltf.scene;
+                scene.add(gltf.scene);
+            });
+
+            // Load blue models
+            modelLoader.load('../assets/PlayerModels/AmogusBlue.glb', function (gltf) {
+                gltf.scene.scale.set(25, 25, 25);
+                gltf.scene.traverse(function (object) {
+                    if (object.isMesh) object.castShadow = true;
+                });
+                playerObjects[1] = gltf.scene;
+                playerClips[1] = gltf.animations;
+                playerMixers[1] = new THREE.AnimationMixer(gltf.scene);
+                scene.add(gltf.scene);
+            });
+            modelLoader.load('../assets/PlayerModels/GunBlue.glb', function (gltf) {
+                gltf.scene.scale.set(20, 20, 20);
+                gltf.scene.traverse(function (object) {
+                    if (object.isMesh) object.castShadow = true;
+                });
+                playerGunObjects[1] = gltf.scene;
+                scene.add(gltf.scene);
+            });
+            modelLoader.load('../assets/PlayerModels/MuzzleFlash.glb', function (gltf) {
+                gltf.scene.scale.set(20, 20, 20);
+                playerFireObjects[1] = gltf.scene;
+                scene.add(gltf.scene);
+            });
+
+            // Load yellow models
+            modelLoader.load('../assets/PlayerModels/AmogusYellow.glb', function (gltf) {
+                gltf.scene.scale.set(25, 25, 25);
+                gltf.scene.traverse(function (object) {
+                    if (object.isMesh) object.castShadow = true;
+                });
+                playerObjects[2] = gltf.scene;
+                playerClips[2] = gltf.animations;
+                playerMixers[2] = new THREE.AnimationMixer(gltf.scene);
+                scene.add(gltf.scene);
+            });
+            modelLoader.load('../assets/PlayerModels/GunYellow.glb', function (gltf) {
+                gltf.scene.scale.set(20, 20, 20);
+                gltf.scene.traverse(function (object) {
+                    if (object.isMesh) object.castShadow = true;
+                });
+                playerGunObjects[2] = gltf.scene;
+                scene.add(gltf.scene);
+            });
+            modelLoader.load('../assets/PlayerModels/MuzzleFlash.glb', function (gltf) {
+                gltf.scene.scale.set(20, 20, 20);
+                playerFireObjects[2] = gltf.scene;
+                scene.add(gltf.scene);
+            });
+
+            // Load green models
+            modelLoader.load('../assets/PlayerModels/AmogusGreen.glb', function (gltf) {
+                gltf.scene.scale.set(25, 25, 25);
+                gltf.scene.traverse(function (object) {
+                    if (object.isMesh) object.castShadow = true;
+                });
+                playerObjects[3] = gltf.scene;
+                playerClips[3] = gltf.animations;
+                playerMixers[3] = new THREE.AnimationMixer(gltf.scene);
+                scene.add(gltf.scene);
+            });
+            modelLoader.load('../assets/PlayerModels/GunGreen.glb', function (gltf) {
+                gltf.scene.scale.set(20, 20, 20);
+                gltf.scene.traverse(function (object) {
+                    if (object.isMesh) object.castShadow = true;
+                });
+                playerGunObjects[3] = gltf.scene;
+                scene.add(gltf.scene);
+            });
+            modelLoader.load('../assets/PlayerModels/MuzzleFlash.glb', function (gltf) {
+                gltf.scene.scale.set(20, 20, 20);
+                playerFireObjects[3] = gltf.scene;
+                scene.add(gltf.scene);
+            });
+
+            // Load map model
+            modelLoader.load('../assets/Map/scene.glb', function (gltf) {
+                mapObject = gltf.scene;
+                mapObject.traverse(function (object) {
+                    if (object.isMesh) {
+                        object.castShadow = true;
+                        object.receiveShadow = true;
+                    }
+                });
+                mapObject.position.set(450, 0, 450);
+                mapObject.scale.set(30, 30, 30);
+                scene.add(mapObject);
+            });
+
+            // Camera
+            camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 2000);
+            camera.position.set(450, 800, 800);
+            camera.lookAt(new THREE.Vector3(450, 0, 450));
+
+            // Append listener to camera (for audio)
+            listener = new THREE.AudioListener();
+            camera.add(listener);
+
+            // Audio loader
+            audioLoader = new THREE.AudioLoader();
+            audioLoader.load('../assets/BGM/Chesed battle 3.mp3', function (buffer) {
+                bgm = new THREE.Audio(listener);
+                bgm.setBuffer(buffer);
+                bgm.setLoop(true);
+                bgm.setVolume(0.25);
+                bgm.play();
+            });
+
+            audioLoader.load('../assets/SFX/pew.wav', function (buffer) {
+                pewSound = new THREE.PositionalAudio(listener);
+                pewSound.setBuffer(buffer);
+                pewSound.setVolume(0.3);
+                pewSound.setDistanceModel('linear');
+                pewSound.setRefDistance(200);
+                pewSound.setMaxDistance(1400);
+            });
+
+            audioLoader.load('../assets/SFX/oof.mp3', function (buffer) {
+                oofSound = new THREE.PositionalAudio(listener);
+                oofSound.setBuffer(buffer);
+                oofSound.setVolume(0.8);
+                oofSound.setDistanceModel('linear');
+                oofSound.setRefDistance(200);
+                oofSound.setMaxDistance(1400);
+            });
+
+            audioLoader.load('../assets/SFX/ding.wav', function (buffer) {
+                dingSound = new THREE.PositionalAudio(listener);
+                dingSound.setBuffer(buffer);
+                dingSound.setVolume(0.2);
+                dingSound.setDistanceModel('linear');
+                dingSound.setRefDistance(100);
+                dingSound.setMaxDistance(800);
+            });
+
+            audioLoader.load('../assets/SFX/hit.ogg', function (buffer) {
+                hitSound = new THREE.PositionalAudio(listener);
+                hitSound.setBuffer(buffer);
+                hitSound.setVolume(0.9);
+                hitSound.setDistanceModel('linear');
+                hitSound.setRefDistance(200);
+                hitSound.setMaxDistance(1400);
+            });
+
+            audioLoader.load('../assets/SFX/reload.mp3', function (buffer) {
+                reloadSound = new THREE.PositionalAudio(listener);
+                reloadSound.setBuffer(buffer);
+                reloadSound.setVolume(1.0);
+                reloadSound.setDistanceModel('linear');
+                reloadSound.setRefDistance(200);
+                reloadSound.setMaxDistance(1400);
+            });
+
+            audioLoader.load('../assets/SFX/recover.wav', function (buffer) {
+                recoverSound = new THREE.PositionalAudio(listener);
+                recoverSound.setBuffer(buffer);
+                recoverSound.setVolume(0.8);
+                recoverSound.setDistanceModel('linear');
+                recoverSound.setRefDistance(100);
+                recoverSound.setMaxDistance(800);
+            });
+
+            // Create scene
+            scene = new THREE.Scene();
+            scene.fog = new THREE.Fog(0x005582, 500, 1100);
+            scene.background = new THREE.Color(0x005582);
+
+            // Target for directional light to shine on
+            lightTarget = new THREE.Object3D();
+            lightTarget.position.set(450, 0, 450);
+            scene.add(lightTarget);
+
+            // Directional lights
+            dirLight1 = new THREE.DirectionalLight(0xffffff, 0.5);
+            dirLight1.position.set(1350, 900, 1350);
+            dirLight1.target = lightTarget;
+            dirLight1.castShadow = true;
+            dirLight1.shadow.mapSize.width = 2048;
+            dirLight1.shadow.mapSize.height = 2048;
+            dirLight1.shadow.camera.left = -1200;
+            dirLight1.shadow.camera.right = 1200;
+            dirLight1.shadow.camera.top = 1200;
+            dirLight1.shadow.camera.bottom = -1200;
+            dirLight1.shadow.camera.near = 0.5;
+            dirLight1.shadow.camera.far = 3000;
+            dirLight1.shadow.radius = 8;
+            scene.add(dirLight1);
+
+            dirLight2 = new THREE.DirectionalLight(0xffffff, 0.1);
+            dirLight2.position.set(900, 900, 1350);
+            dirLight2.target = lightTarget;
+            dirLight2.castShadow = true;
+            dirLight2.shadow.mapSize.width = 2048;
+            dirLight2.shadow.mapSize.height = 2048;
+            dirLight2.shadow.camera.left = -1200;
+            dirLight2.shadow.camera.right = 1200;
+            dirLight2.shadow.camera.top = 1200;
+            dirLight2.shadow.camera.bottom = -1200;
+            dirLight2.shadow.camera.near = 0.5;
+            dirLight2.shadow.camera.far = 3000;
+            dirLight2.shadow.radius = 8;
+            scene.add(dirLight2);
+
+            dirLight3 = new THREE.DirectionalLight(0xffffff, 0.8);
+            dirLight3.position.set(900, 900, 1350);
+            dirLight3.target = lightTarget;
+            dirLight3.castShadow = true;
+            dirLight3.shadow.mapSize.width = 2048;
+            dirLight3.shadow.mapSize.height = 2048;
+            dirLight3.shadow.camera.left = -1200;
+            dirLight3.shadow.camera.right = 1200;
+            dirLight3.shadow.camera.top = 1200;
+            dirLight3.shadow.camera.bottom = -1200;
+            dirLight3.shadow.camera.near = 0.5;
+            dirLight3.shadow.camera.far = 3000;
+            dirLight3.shadow.radius = 8;
+            scene.add(dirLight3);
+
+            // Ambient light
+            ambLight = new THREE.AmbientLight(0xc5f8f3, 0.8);
+            scene.add(ambLight);
+
+            // Renderer and appending it to the HTML
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            document.body.appendChild(renderer.domElement);
+
+            render();
+        }
+
+        function render() {
+            // requestAnimationFrame(render);
+            for (var i = 0; i < 4; ++i) {
+                if (playerMixers[i] != null) playerMixers[i].update(0.032);
+            }
+
+            renderer.render(scene, camera);
+        }
+
+    </script>
+</body>
+
+</html>
