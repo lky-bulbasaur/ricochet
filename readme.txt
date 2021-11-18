@@ -1,6 +1,3 @@
-COMP4451 Game Programming Submission - Ricochet
-Group 17   |   LAW Kai Yuet, Ian   |   kylawah@connect.ust.hk
-
 Ricochet is a LAN-based multiplayer game. Therefore, running this game consists of:
 -	Starting the server
 -	Joining the game
